@@ -113,9 +113,9 @@ if st.button("🧠 NAČÍST OSTRÝ MODEL Z NOČNÍHO TRÉNINKU"):
                 prediction = loaded_model.predict(last_row[features])[0]
                 
                 if prediction == 1:
-                    st.session_state.signal = "KOUPIT"
+                    st.session_state.signal = "KOUPIT SPY"
                 else:
-                    st.session_state.signal = "DRŽET HOTOVOST (Nekupovat)"
+                    st.session_state.signal = "DRŽET HOTOVOST (Nekupovat SPY)"
                     
                 st.session_state.sim_run = True
                 
@@ -171,10 +171,14 @@ if st.session_state.sim_run:
     }
     st.table(pd.DataFrame(trade_data))
     
-    st.subheader("Modelový Backtest (Proč jsem dnes dal tento pokyn?)")
-    st.markdown("Graf výše ukazuje teoretický vývoj **historického testu (backtestu)** vítězného modelu za posledních 18 dní. Vydělal by 3,4 %, ale aktuálně se trend láme, proto dnes nedoporučuji nakupovat.")
+    st.subheader("Zdůvodnění dnešního signálu")
     
-    st.info("💡 **Doporučení pro Patria:** Vašich 10 000 USD je dnes v bezpečí na účtu. Vyčkejte na další spuštění.")
+    if "KOUPIT" in st.session_state.signal:
+        st.markdown("Model analyzoval posledních 60 dní trhu a jeho indikátory (Klouzavé průměry, RSI a Volatilita) se shodují s růstovým trendem.")
+        st.info("💡 **Doporučení pro Patria:** Model vyhodnotil situaci jako příznivou. Doporučuji dnes do 22:00 nakoupit SPY (ISIN: US78462F1030) za celou alokaci.")
+    else:
+        st.markdown("Model analyzoval posledních 60 dní trhu a detekoval riziko zlomu trendu nebo příliš vysokou volatilitu.")
+        st.info("💡 **Doporučení pro Patria:** Vašich 10 000 USD je dnes v bezpečí na účtu v hotovosti. Vyčkejte na další spuštění.")
 
 with tab2:
     st.header("Analýza vašeho stávajícího portfolia")
