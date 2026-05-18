@@ -6,9 +6,17 @@ from datetime import datetime, timedelta
 def get_historical_data(ticker_symbol, days_back):
     """
     Stáhne historická OHLCV data přes yfinance pomocí 'period', což je stabilnější na cloudu.
+    Obejítí banu GitHub Actions pomocí reálného User-Agenta prohlížeče.
     """
+    import requests
     print(f"Stahuji data pro {ticker_symbol} (posledních {days_back} dní)...")
-    ticker = yf.Ticker(ticker_symbol)
+    
+    session = requests.Session()
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+    })
+    
+    ticker = yf.Ticker(ticker_symbol, session=session)
     
     # Použijeme bezpečný period="10y" a pak to ořízneme, toto funguje na GitHub Actions vždy
     df = ticker.history(period="10y")
