@@ -3,18 +3,25 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 
-def get_historical_data(ticker_symbol, start_date, end_date):
+def get_historical_data(ticker_symbol, days_back):
     """
-    Stáhne historická OHLCV data přes yfinance.
+    Stáhne historická OHLCV data přes yfinance pomocí 'period', což je stabilnější na cloudu.
     """
-    print(f"Stahuji data pro {ticker_symbol} od {start_date} do {end_date}...")
+    print(f"Stahuji data pro {ticker_symbol} (posledních {days_back} dní)...")
     ticker = yf.Ticker(ticker_symbol)
-    df = ticker.history(start=start_date, end=end_date)
+    
+    # Použijeme bezpečný period="10y" a pak to ořízneme, toto funguje na GitHub Actions vždy
+    df = ticker.history(period="10y")
     
     if df.empty:
         raise ValueError(f"Žádná data pro {ticker_symbol}")
         
     df = df.reset_index()
+    
+    # Ponecháme jen požadovaný počet posledních dní
+    if len(df) > days_back:
+        df = df.tail(days_back).copy()
+        
     # Zajištění konzistence názvů sloupců
     df = df[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']]
     return df
@@ -59,10 +66,7 @@ def prepare_dataset(ticker="SPY", days_back=365, for_training=True):
     """
     Hlavní funkce pipeline pro přípravu finálního DataFrame s Features.
     """
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=days_back)
-    
-    df = get_historical_data(ticker, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+    df = get_historical_data(ticker, days_back)
     df = calculate_technical_indicators(df)
     df['Sentiment_Score'] = simulate_rag_sentiment(df['Date'])
     
