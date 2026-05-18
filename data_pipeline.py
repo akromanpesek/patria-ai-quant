@@ -5,32 +5,52 @@ from datetime import datetime, timedelta
 
 def get_historical_data(ticker_symbol, days_back):
     """
-    Stáhne historická OHLCV data přes yfinance pomocí 'period', což je stabilnější na cloudu.
-    Obejítí banu GitHub Actions pomocí reálného User-Agenta prohlížeče.
+    Stáhne historická OHLCV data přes spolehlivé Alpha Vantage API (obchází zákazy na cloudu).
     """
+    import os
     import requests
-    print(f"Stahuji data pro {ticker_symbol} (posledních {days_back} dní)...")
+    import pandas as pd
     
-    session = requests.Session()
-    session.headers.update({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
-    })
-    
-    ticker = yf.Ticker(ticker_symbol, session=session)
-    
-    # Použijeme bezpečný period="10y" a pak to ořízneme, toto funguje na GitHub Actions vždy
-    df = ticker.history(period="10y")
-    
-    if df.empty:
-        raise ValueError(f"Žádná data pro {ticker_symbol}")
+    api_key = os.getenv("ALPHA_VANTAGE_API_KEY")
+    if not api_key:
+        raise ValueError("Chybí ALPHA_VANTAGE_API_KEY v Secrets!")
         
+    print(f"Stahuji data pro {ticker_symbol} z Alpha Vantage...")
+    url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker_symbol}&outputsize=compact&apikey={api_key}"
+    
+    response = requests.get(url)
+    data = response.json()
+    
+    if "Time Series (Daily)" not in data:
+        raise ValueError(f"Chyba Alpha Vantage API (pravděpodobně vyčerpán limit?): {data}")
+        
+    ts = data["Time Series (Daily)"]
+    
+    # Prevod z JSON na DataFrame
+    df = pd.DataFrame.from_dict(ts, orient='index')
+    df.index.name = 'Date'
     df = df.reset_index()
     
-    # Ponecháme jen požadovaný počet posledních dní
+    # Prejmenovani sloupcu a prevod na cisla
+    df = df.rename(columns={
+        "1. open": "Open",
+        "2. high": "High",
+        "3. low": "Low",
+        "4. close": "Close",
+        "5. volume": "Volume"
+    })
+    
+    # Data přichází seřazena od nejnovějšího k nejstaršímu, musíme to otočit
+    df = df.sort_values('Date', ascending=True)
+    
+    for col in ["Open", "High", "Low", "Close", "Volume"]:
+        df[col] = pd.to_numeric(df[col])
+        
+    df['Date'] = pd.to_datetime(df['Date'])
+    
     if len(df) > days_back:
         df = df.tail(days_back).copy()
         
-    # Zajištění konzistence názvů sloupců
     df = df[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']]
     return df
 
