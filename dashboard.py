@@ -162,10 +162,12 @@ if st.session_state.sim_run:
     st.subheader("Historie mých pokynů pro vás")
     st.markdown("*(Toto je váš osobní deník pokynů, které jsem vám dal od začátku naší spolupráce)*")
     
+    clean_signal = st.session_state.signal.split("<br>")[0] if st.session_state.signal else "DRŽET HOTOVOST"
+    
     trade_data = {
         "Datum": [(datetime.now() - timedelta(days=4-i)).strftime("%Y-%m-%d") for i in range(5)],
         "Den obchodování": ["Den -4", "Den -3", "Den -2", "Den -1", "Dnes (Den 1)"],
-        "Můj Pokyn (Signál)": ["KOUPIT", "DRŽET", "PRODAT", "DRŽET HOTOVOST", st.session_state.signal if st.session_state.signal else "DRŽET HOTOVOST"],
+        "Můj Pokyn (Signál)": ["KOUPIT", "DRŽET", "PRODAT", "DRŽET HOTOVOST", clean_signal],
         "Provedli jsme nákup?": ["Simulace", "Simulace", "Simulace", "Simulace", "Čeká na vás"],
         "Zůstatek": ["$9,800.00", "$9,950.00", "$10,120.00", "$10,120.00", "$10,000.00 (Reálný)"]
     }
