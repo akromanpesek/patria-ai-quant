@@ -6,8 +6,6 @@ import time
 from datetime import datetime, timedelta
 from data_pipeline import prepare_dataset
 from models import create_initial_population
-from risk_backtest import BacktestEngine
-from evolutionary_engine import evolve_population
 
 # Konfigurace stránky
 st.set_page_config(page_title="AI Quant Trading Systém", page_icon="📈", layout="wide")
