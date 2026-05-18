@@ -113,9 +113,9 @@ if st.button("🧠 NAČÍST OSTRÝ MODEL Z NOČNÍHO TRÉNINKU"):
                 prediction = loaded_model.predict(last_row[features])[0]
                 
                 if prediction == 1:
-                    st.session_state.signal = "KOUPIT SPY"
+                    st.session_state.signal = "KOUPIT SPY<br><span style='font-size:16px;'>(ISIN: US78462F1030)</span>"
                 else:
-                    st.session_state.signal = "DRŽET HOTOVOST (Nekupovat SPY)"
+                    st.session_state.signal = "DRŽET HOTOVOST<br><span style='font-size:16px;'>(Nekupovat SPY)</span>"
                     
                 st.session_state.sim_run = True
                 
