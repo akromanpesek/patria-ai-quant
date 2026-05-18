@@ -1,0 +1,28 @@
+name: Daily Quant Signal
+on:
+  schedule:
+    # Běží od pondělí do pátku ve 20:00 středoevropského času
+    - cron: '0 18 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Stáhnutí kódu z repozitáře
+        uses: actions/checkout@v4
+
+      - name: Nastavení Pythonu
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Instalace knihoven
+        run: pip install -r requirements.txt
+
+      - name: Spuštění Kvantového Agenta
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python daily_worker.py
