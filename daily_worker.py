@@ -2,6 +2,9 @@ import os
 import pickle
 import pandas as pd
 from datetime import datetime
+import importlib
+import data_pipeline
+importlib.reload(data_pipeline)
 from data_pipeline import prepare_dataset
 
 def get_daily_signal():

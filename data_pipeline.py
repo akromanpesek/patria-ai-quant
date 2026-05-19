@@ -88,7 +88,7 @@ def simulate_rag_sentiment(dates):
     sentiment_scores = np.clip(sentiment_scores, -1.0, 1.0)
     return sentiment_scores
 
-def prepare_dataset(ticker="SPY", days_back=365, for_training=True):
+def prepare_dataset(ticker="SPY", days_back=365, for_training=True, **kwargs):
     """
     Hlavní funkce pipeline pro přípravu finálního DataFrame s Features.
     """

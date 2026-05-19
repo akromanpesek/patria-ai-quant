@@ -6,6 +6,9 @@ import time
 import os
 import json
 from datetime import datetime, timedelta
+import importlib
+import data_pipeline
+importlib.reload(data_pipeline)
 from data_pipeline import prepare_dataset
 import pickle
 
