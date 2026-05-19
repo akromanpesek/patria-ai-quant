@@ -5,41 +5,46 @@ from datetime import datetime, timedelta
 
 def get_historical_data(ticker_symbol, days_back):
     """
-    Stáhne historická OHLCV data z Yahoo Finance s maskováním za reálný prohlížeč.
-    Toto řešení umožňuje stáhnout neomezené množství akcií pro Multi-Asset analýzu.
+    Stáhne historická OHLCV data přes spolehlivé Alpha Vantage API.
     """
-    import yfinance as yf
+    import os
     import requests
     import pandas as pd
     
-    print(f"Stahuji data pro {ticker_symbol} z Yahoo Finance...")
+    api_key = os.getenv("ALPHA_VANTAGE_API_KEY", "Z7I7ASLQDDSXK9U2") # Fallback na klíč, pokud chybí env
+        
+    print(f"Stahuji data pro {ticker_symbol} z Alpha Vantage...")
+    url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker_symbol}&outputsize=compact&apikey={api_key}"
     
-    # Vytvoření relace s falešnou hlavičkou pro oklamání blokace z GitHubu
-    session = requests.Session()
-    session.headers.update({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        'Accept': '*/*',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive'
-    })
+    response = requests.get(url)
+    data = response.json()
     
-    # Použití Tickeru s injektovanou relací
-    ticker = yf.Ticker(ticker_symbol, session=session)
-    df = ticker.history(period="5y")
+    if "Time Series (Daily)" not in data:
+        if "rate limit" in str(data).lower() or "Information" in data:
+            raise ValueError("Limit 25 dotazů denně na Alpha Vantage vyčerpán.")
+        else:
+            raise ValueError(f"Chyba Alpha Vantage: {data}")
+        
+    ts = data["Time Series (Daily)"]
     
-    if df.empty:
-        # V případě úplného banu fallback: pokus o vyhledání kratší historie
-        df = ticker.history(period="1y")
-        if df.empty:
-            raise ValueError(f"Chyba: Nepodařilo se stáhnout data pro {ticker_symbol}. Burza neodpovídá.")
-            
+    df = pd.DataFrame.from_dict(ts, orient='index')
+    df.index.name = 'Date'
     df = df.reset_index()
     
-    # Sjednocení a úprava sloupců
-    if 'Date' not in df.columns and 'Datetime' in df.columns:
-        df = df.rename(columns={'Datetime': 'Date'})
+    df = df.rename(columns={
+        "1. open": "Open",
+        "2. high": "High",
+        "3. low": "Low",
+        "4. close": "Close",
+        "5. volume": "Volume"
+    })
+    
+    df = df.sort_values('Date', ascending=True)
+    
+    for col in ["Open", "High", "Low", "Close", "Volume"]:
+        df[col] = pd.to_numeric(df[col])
         
-    df['Date'] = pd.to_datetime(df['Date']).dt.tz_localize(None)
+    df['Date'] = pd.to_datetime(df['Date'])
     
     if len(df) > days_back:
         df = df.tail(days_back).copy()

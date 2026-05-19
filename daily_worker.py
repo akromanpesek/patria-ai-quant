@@ -29,14 +29,34 @@ def get_daily_signal():
     today_date = datetime.now().strftime("%d. %m. %Y")
     
     message_lines = [
-        f"🤖 <b>Patria AI Quant - Multi-Asset Report</b>",
+        f"🤖 <b>Patria AI Quant - Kompletní Report</b>",
         f"📅 Datum: {today_date}",
-        f"💰 Hotovost k dispozici: ${cash:,.2f}\n",
-        f"<b>ANALÝZA VAŠEHO PORTFOLIA:</b>"
+        f"💰 Hotovost k dispozici: ${cash:,.2f}\n"
     ]
     
     features = ['SMA_10', 'SMA_30', 'Volatility', 'RSI', 'Sentiment_Score']
     
+    # --- HLAVNÍ STRATEGIE: SPY ---
+    try:
+        spy_df = prepare_dataset(ticker="SPY", days_back=60, for_training=False)
+        spy_last = spy_df.iloc[-1:]
+        spy_price = spy_last['Close'].iloc[0]
+        spy_pred = model.predict(spy_last[features])[0]
+        
+        if spy_pred == 1:
+            spy_sig = "🟢 KOUPIT SPY"
+        else:
+            spy_sig = "🔴 DRŽET HOTOVOST / PRODAT SPY"
+            
+        message_lines.append(f"🔥 <b>HLAVNÍ TRH (S&P 500)</b>")
+        message_lines.append(f"Cena SPY: ${spy_price:.2f}")
+        message_lines.append(f"Pokyn: <b>{spy_sig}</b>\n")
+    except Exception as e:
+        message_lines.append(f"🔥 <b>HLAVNÍ TRH (S&P 500)</b>: ❌ Chyba dat\n")
+
+    message_lines.append(f"<b>ANALÝZA VAŠEHO PORTFOLIA:</b>")
+    
+    # --- VEDLEJŠÍ STRATEGIE: OSOBNÍ AKCIE ---
     for asset in assets:
         ticker = asset["ticker"]
         shares = asset.get("shares", 0)
