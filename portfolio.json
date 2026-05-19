@@ -1,0 +1,12 @@
+{
+    "assets": [
+        {"ticker": "ASML", "sector": "Polovodiče", "shares": 5, "buy_price": 1317.49},
+        {"ticker": "KLAC", "sector": "Polovodiče", "shares": 2, "buy_price": 1436.60},
+        {"ticker": "AMAT", "sector": "Polovodiče", "shares": 10, "buy_price": 337.63},
+        {"ticker": "TER", "sector": "Polovodiče", "shares": 15, "buy_price": 293.40},
+        {"ticker": "T", "sector": "Telekomunikace", "shares": 100, "buy_price": 29.29},
+        {"ticker": "AMRN", "sector": "Farmacie", "shares": 50, "buy_price": 120.00},
+        {"ticker": "RC", "sector": "Reality", "shares": 200, "buy_price": 15.32}
+    ],
+    "cash": 10000.00
+}

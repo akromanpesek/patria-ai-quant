@@ -5,63 +5,80 @@ from datetime import datetime
 from data_pipeline import prepare_dataset
 
 def get_daily_signal():
-    print("=== START DAILY WORKER ===")
+    print("=== START MULTI-ASSET WORKER ===")
     
-    # 1. Načtení vítězného modelu
+    # 1. Načtení modelu
     model_path = os.path.join('trained_models', 'best_deep_model.pkl')
     if not os.path.exists(model_path):
         return "Chyba: Model best_deep_model.pkl nenalezen!"
-        
     with open(model_path, 'rb') as f:
         model = pickle.load(f)
-    print(f"Model {model.name} úspěšně načten.")
-    
-    # 2. Stažení nejčerstvějších dat z burzy (např. posledních 60 dní pro indikátory)
-    print("Stahuji dnešní živá tržní data...")
-    try:
-        # for_training=False zajistí, že nám systém neodmázne dnešní nejnovější svíčku!
-        df = prepare_dataset(ticker="SPY", days_back=60, for_training=False)
-    except Exception as e:
-        return f"Chyba při stahování dat z burzy: {e}"
         
-    # 3. Predikce pro dnešní den
+    # 2. Načtení portfolia
+    import json
+    portfolio_path = "portfolio.json"
+    if not os.path.exists(portfolio_path):
+        return "Chyba: Soubor portfolio.json nenalezen!"
+        
+    with open(portfolio_path, "r", encoding="utf-8") as f:
+        portfolio = json.load(f)
+        
+    assets = portfolio.get("assets", [])
+    cash = portfolio.get("cash", 0)
+    
+    today_date = datetime.now().strftime("%d. %m. %Y")
+    
+    message_lines = [
+        f"🤖 <b>Patria AI Quant - Multi-Asset Report</b>",
+        f"📅 Datum: {today_date}",
+        f"💰 Hotovost k dispozici: ${cash:,.2f}\n",
+        f"<b>ANALÝZA VAŠEHO PORTFOLIA:</b>"
+    ]
+    
     features = ['SMA_10', 'SMA_30', 'Volatility', 'RSI', 'Sentiment_Score']
-    last_row = df.iloc[-1:]  # Vzít absolutně poslední aktuální svíčku
-    today_date = last_row['Date'].iloc[0].strftime("%d. %m. %Y")
-    current_price = last_row['Close'].iloc[0]
     
-    # Výpočet predikce
-    prediction = model.predict(last_row[features])[0]
-    
-    budget = 10000.00
-    reserve_fee = 100.00
-    allocation = budget - reserve_fee
-    
-    if prediction == 1:
-        signal = "🟢 KOUPIT"
-        action_text = (f"Cena SPY: ${current_price:.2f} (ISIN: US78462F1030)\n"
-                       f"Model detekuje růstový trend.\n"
-                       f"💰 ALOKACE: Nakupte za ${allocation:,.2f} (zůstatek ${reserve_fee} na poplatky).")
-    else:
-        signal = "🟡 DRŽET HOTOVOST / PRODAT"
-        action_text = (f"Cena SPY: ${current_price:.2f} (ISIN: US78462F1030)\n"
-                       f"Trh je nejistý nebo klesá. Zůstaň v hotovosti ($10,000.00).")
+    for asset in assets:
+        ticker = asset["ticker"]
+        shares = asset.get("shares", 0)
+        buy_price = asset.get("buy_price", 0)
         
-    # 4. Sestavení zprávy na mobil
-    message = (
-        f"🤖 Patria AI Quant - Denní Report\n"
-        f"📅 Datum: {today_date}\n\n"
-        f"🔥 SIGNÁL: {signal}\n"
-        f"📊 {action_text}\n\n"
-        f"🧠 (Generováno modelem: {model.name.split('_Gen')[0]} v cloudu)"
-    )
+        print(f"Zpracovávám: {ticker}...")
+        try:
+            df = prepare_dataset(ticker=ticker, days_back=60, for_training=False)
+            last_row = df.iloc[-1:]
+            current_price = last_row['Close'].iloc[0]
+            prediction = model.predict(last_row[features])[0]
+            
+            # Výpočet profitu
+            if shares > 0 and buy_price > 0:
+                profit = (current_price - buy_price) * shares
+                profit_str = f"+${profit:.2f}" if profit >= 0 else f"-${abs(profit):.2f}"
+                pos_info = f"Máte: {shares}ks (Zisk: {profit_str})"
+            else:
+                pos_info = "Nemáte nakoupeno"
+            
+            # Signál
+            if prediction == 1:
+                if shares > 0:
+                    sig_text = "🟢 DRŽET (Pozice roste)"
+                else:
+                    sig_text = "🟢 KOUPIT (Nový trend)"
+            else:
+                if shares > 0:
+                    sig_text = "🔴 PRODAT (Ukončit pozici)"
+                else:
+                    sig_text = "🟡 IGNOROVAT (Klesá)"
+                    
+            line = f"▪️ <b>{ticker}</b> (${current_price:.2f}): {sig_text} | <i>{pos_info}</i>"
+            message_lines.append(line)
+            
+        except Exception as e:
+            message_lines.append(f"▪️ <b>{ticker}</b>: ❌ Chyba dat ({str(e)[:30]})")
+            
+    message_lines.append(f"\n🧠 Model: {model.name.split('_Gen')[0]}")
     
-    print("\n--- ZPRÁVA PRO ODESLÁNÍ ---")
-    try:
-        print(message)
-    except UnicodeEncodeError:
-        print(message.encode('ascii', 'ignore').decode('ascii'))
-    print("---------------------------\n")
+    message = "\n".join(message_lines)
+    print(message)
     return message
 
 def send_telegram_message(message):

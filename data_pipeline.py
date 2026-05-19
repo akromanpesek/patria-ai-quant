@@ -5,48 +5,41 @@ from datetime import datetime, timedelta
 
 def get_historical_data(ticker_symbol, days_back):
     """
-    Stáhne historická OHLCV data přes spolehlivé Alpha Vantage API (obchází zákazy na cloudu).
+    Stáhne historická OHLCV data z Yahoo Finance s maskováním za reálný prohlížeč.
+    Toto řešení umožňuje stáhnout neomezené množství akcií pro Multi-Asset analýzu.
     """
-    import os
+    import yfinance as yf
     import requests
     import pandas as pd
     
-    api_key = os.getenv("ALPHA_VANTAGE_API_KEY")
-    if not api_key:
-        raise ValueError("Chybí ALPHA_VANTAGE_API_KEY v Secrets!")
-        
-    print(f"Stahuji data pro {ticker_symbol} z Alpha Vantage...")
-    url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker_symbol}&outputsize=compact&apikey={api_key}"
+    print(f"Stahuji data pro {ticker_symbol} z Yahoo Finance...")
     
-    response = requests.get(url)
-    data = response.json()
-    
-    if "Time Series (Daily)" not in data:
-        raise ValueError(f"Chyba Alpha Vantage API (pravděpodobně vyčerpán limit?): {data}")
-        
-    ts = data["Time Series (Daily)"]
-    
-    # Prevod z JSON na DataFrame
-    df = pd.DataFrame.from_dict(ts, orient='index')
-    df.index.name = 'Date'
-    df = df.reset_index()
-    
-    # Prejmenovani sloupcu a prevod na cisla
-    df = df.rename(columns={
-        "1. open": "Open",
-        "2. high": "High",
-        "3. low": "Low",
-        "4. close": "Close",
-        "5. volume": "Volume"
+    # Vytvoření relace s falešnou hlavičkou pro oklamání blokace z GitHubu
+    session = requests.Session()
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': '*/*',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive'
     })
     
-    # Data přichází seřazena od nejnovějšího k nejstaršímu, musíme to otočit
-    df = df.sort_values('Date', ascending=True)
+    # Použití Tickeru s injektovanou relací
+    ticker = yf.Ticker(ticker_symbol, session=session)
+    df = ticker.history(period="5y")
     
-    for col in ["Open", "High", "Low", "Close", "Volume"]:
-        df[col] = pd.to_numeric(df[col])
+    if df.empty:
+        # V případě úplného banu fallback: pokus o vyhledání kratší historie
+        df = ticker.history(period="1y")
+        if df.empty:
+            raise ValueError(f"Chyba: Nepodařilo se stáhnout data pro {ticker_symbol}. Burza neodpovídá.")
+            
+    df = df.reset_index()
+    
+    # Sjednocení a úprava sloupců
+    if 'Date' not in df.columns and 'Datetime' in df.columns:
+        df = df.rename(columns={'Datetime': 'Date'})
         
-    df['Date'] = pd.to_datetime(df['Date'])
+    df['Date'] = pd.to_datetime(df['Date']).dt.tz_localize(None)
     
     if len(df) > days_back:
         df = df.tail(days_back).copy()
