@@ -9,7 +9,6 @@ from datetime import datetime, timedelta
 import importlib
 import data_pipeline
 importlib.reload(data_pipeline)
-from data_pipeline import prepare_dataset
 import pickle
 
 st.set_page_config(page_title="AI Quant Trading Systém", page_icon="📈", layout="wide")
@@ -92,7 +91,7 @@ with tab1:
             st.session_state.deep_success = True
             
             try:
-                df = prepare_dataset(ticker="SPY", days_back=60, for_training=False)
+                df = data_pipeline.prepare_dataset(ticker="SPY", days_back=60, for_training=False)
                 features = ['SMA_10', 'SMA_30', 'Volatility', 'RSI', 'Sentiment_Score']
                 last_row = df.iloc[-1:]
                 prediction = loaded_model.predict(last_row[features])[0]
@@ -160,7 +159,7 @@ with tab2:
                 buy_price = asset.get("buy_price", 0)
                 
                 try:
-                    df = prepare_dataset(ticker=ticker, days_back=60, for_training=False)
+                    df = data_pipeline.prepare_dataset(ticker=ticker, days_back=60, for_training=False)
                     last_row = df.iloc[-1:]
                     current_price = last_row['Close'].iloc[0]
                     prediction = model.predict(last_row[features])[0]

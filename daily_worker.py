@@ -5,7 +5,6 @@ from datetime import datetime
 import importlib
 import data_pipeline
 importlib.reload(data_pipeline)
-from data_pipeline import prepare_dataset
 
 def get_daily_signal():
     print("=== START MULTI-ASSET WORKER ===")
@@ -41,7 +40,7 @@ def get_daily_signal():
     
     # --- HLAVNÍ STRATEGIE: SPY ---
     try:
-        spy_df = prepare_dataset(ticker="SPY", days_back=60, for_training=False)
+        spy_df = data_pipeline.prepare_dataset(ticker="SPY", days_back=60, for_training=False)
         spy_last = spy_df.iloc[-1:]
         spy_price = spy_last['Close'].iloc[0]
         spy_pred = model.predict(spy_last[features])[0]
@@ -67,7 +66,7 @@ def get_daily_signal():
         
         print(f"Zpracovávám: {ticker}...")
         try:
-            df = prepare_dataset(ticker=ticker, days_back=60, for_training=False)
+            df = data_pipeline.prepare_dataset(ticker=ticker, days_back=60, for_training=False)
             last_row = df.iloc[-1:]
             current_price = last_row['Close'].iloc[0]
             prediction = model.predict(last_row[features])[0]
